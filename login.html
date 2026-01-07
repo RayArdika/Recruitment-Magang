@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Login Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 h-screen flex items-center justify-center">
+
+    <div class="bg-white p-8 rounded-xl shadow-2xl w-96">
+        <h2 class="text-2xl font-bold text-center mb-6 text-slate-800">🔒 Admin Login</h2>
+        
+        <form id="loginForm" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-600 mb-1">Username</label>
+                <input type="text" id="username" class="w-full border p-2 rounded focus:ring focus:ring-blue-200 outline-none" placeholder="admin">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-600 mb-1">Password</label>
+                <input type="password" id="password" class="w-full border p-2 rounded focus:ring focus:ring-blue-200 outline-none" placeholder="••••••">
+            </div>
+            <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 font-bold transition">MASUK</button>
+        </form>
+        <p id="errorMsg" class="text-red-500 text-sm text-center mt-4 hidden">Username/Password salah!</p>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+
+            // --- GANTI PASSWORD DISINI ---
+            if(u === 'admin' && p === 'milenia123') {
+                // Simpan sesi login
+                sessionStorage.setItem('isAdminLoggedIn', 'true');
+                window.location.href = 'admin.html'; // Arahkan ke dashboard
+            } else {
+                document.getElementById('errorMsg').classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

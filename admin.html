@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <script>
+        // Cek apakah user sudah login?
+        if (sessionStorage.getItem('isAdminLoggedIn') !== 'true') {
+            alert("Anda harus login terlebih dahulu!");
+            window.location.href = 'login.html'; // Tendang balik ke login
+        }
+    </script>
+    <title>Admin Dashboard | MileniaNews</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>body { font-family: 'Plus Jakarta Sans', sans-serif; }</style>
+</head>
+<body class="bg-gray-100 text-slate-800">
+
+    <div class="flex h-screen overflow-hidden">
+        <aside class="w-64 bg-slate-900 text-white flex flex-col shadow-2xl z-20">
+            <div class="h-20 flex items-center justify-center border-b border-gray-700 bg-slate-950">
+                <h1 class="text-xl font-bold tracking-wider">MILENIA<span class="text-blue-500">ADMIN</span></h1>
+            </div>
+            <nav class="flex-1 p-4 space-y-2">
+                <button onclick="switchView('list')" class="w-full flex items-center px-4 py-3 bg-blue-600 rounded-xl text-white shadow-lg shadow-blue-900/50">
+                    📂 Data Pelamar
+                </button>
+                <button onclick="switchView('analytics')" class="w-full flex items-center px-4 py-3 text-gray-400 hover:bg-slate-800 rounded-xl transition-all">
+                    📊 Statistik
+                </button>
+                <button onclick="logout()" class="text-xs text-gray-400 hover:text-white w-full text-left mt-2">
+                    🚪 Keluar (Logout)
+                </button>
+                
+                <script>
+                    function logout() {
+                        sessionStorage.removeItem('isAdminLoggedIn');
+                        window.location.href = 'login.html';
+                    }
+                </script>
+            </nav>
+            <div class="p-4 border-t border-gray-800">
+                <button onclick="clearData()" class="text-xs text-red-400 hover:text-red-300 w-full text-left">🗑️ Reset Database</button>
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col relative overflow-hidden">
+            <header class="h-20 bg-white border-b flex items-center justify-between px-8 shadow-sm z-10">
+                <h2 class="text-xl font-bold text-slate-800">Dashboard Recruitment</h2>
+                <div class="bg-blue-50 text-blue-700 px-4 py-1.5 rounded-full text-sm font-bold" id="total-badge">0 Pelamar</div>
+            </header>
+
+            <div id="view-list" class="flex-1 overflow-auto p-8">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Pelamar</th>
+                                <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Kampus & Jurusan</th>
+                                <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Berkas (Klik utk Buka)</th>
+                                <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body" class="bg-white divide-y divide-gray-200 text-sm"></tbody>
+                    </table>
+                    <div id="empty-state" class="hidden py-20 text-center text-gray-400">Belum ada data masuk.</div>
+                </div>
+            </div>
+
+            <div id="view-analytics" class="hidden flex-1 overflow-auto p-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border">
+                        <h3 class="font-bold mb-4">Sebaran Jurusan</h3>
+                        <div class="h-64"><canvas id="chartMajor"></canvas></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border">
+                        <h3 class="font-bold mb-4">Durasi Pilihan</h3>
+                        <div class="h-64 flex justify-center"><canvas id="chartDuration"></canvas></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', loadData);
+
+        function loadData() {
+            const applicants = JSON.parse(localStorage.getItem('mileniaApplicants') || '[]');
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+            document.getElementById('total-badge').innerText = applicants.length + ' Pelamar';
+
+            if(applicants.length === 0) {
+                document.getElementById('empty-state').classList.remove('hidden');
+                return;
+            }
+            document.getElementById('empty-state').classList.add('hidden');
+
+            applicants.reverse().forEach(app => {
+                // Cek apakah data lama (versi teks) atau data baru (versi base64)
+                const isNewVer = app.files && app.files.cv; 
+                
+                // Link Generator
+                const cvLink = isNewVer ? `<a href="${app.files.cv}" target="_blank" class="text-blue-600 hover:underline font-bold">CV</a>` : `<span class="text-gray-400">Old Data</span>`;
+                const photoLink = isNewVer ? `<a href="${app.files.photo}" target="_blank" class="text-blue-600 hover:underline font-bold">Foto Formal</a>` : ``;
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-blue-50/50 transition-colors";
+                tr.innerHTML = `
+                    <td class="px-6 py-4">
+                        <div class="font-bold text-slate-900">${app.fullname}</div>
+                        <div class="text-xs text-slate-500">${app.email}</div>
+                        <div class="text-xs text-slate-500">${app.whatsapp}</div>
+                        <div class="text-[10px] text-gray-400 mt-1">${app.timestamp}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="font-medium text-slate-800">${app.school}</div>
+                        <div class="text-xs text-slate-500">${app.major} (Sem ${app.semester})</div>
+                        <span class="inline-block mt-1 px-2 py-0.5 bg-indigo-100 text-indigo-700 text-[10px] font-bold rounded">${app.duration}</span>
+                    </td>
+                    <td class="px-6 py-4 space-y-1">
+                        <div>${cvLink}</div>
+                        <div>${photoLink}</div>
+                        ${isNewVer ? `<a href="${app.files.letter}" target="_blank" class="text-blue-600 hover:underline font-bold">Surat Magang</a>` : ''}
+                    </td>
+                    <td class="px-6 py-4">
+                        <select class="text-xs border-gray-300 rounded shadow-sm focus:ring focus:ring-blue-200">
+                            <option>Baru</option>
+                            <option>Interview</option>
+                            <option>Diterima</option>
+                            <option>Ditolak</option>
+                        </select>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            renderCharts(applicants);
+        }
+
+        function switchView(view) {
+            document.getElementById('view-list').classList.toggle('hidden', view !== 'list');
+            document.getElementById('view-analytics').classList.toggle('hidden', view !== 'analytics');
+        }
+
+        function clearData() {
+            if(confirm('Hapus semua data pelamar?')) {
+                localStorage.removeItem('mileniaApplicants');
+                loadData();
+            }
+        }
+
+        // Simple Analytics
+        let chart1, chart2;
+        function renderCharts(data) {
+            if(chart1) chart1.destroy();
+            if(chart2) chart2.destroy();
+
+            const majors = {};
+            const duration = {'3 Bulan':0, '6 Bulan':0};
+
+            data.forEach(d => {
+                majors[d.major] = (majors[d.major] || 0) + 1;
+                if(duration[d.duration] !== undefined) duration[d.duration]++;
+            });
+
+            chart1 = new Chart(document.getElementById('chartMajor'), {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(majors),
+                    datasets: [{ label: 'Pelamar', data: Object.values(majors), backgroundColor: '#3b82f6' }]
+                },
+                options: { responsive: true, maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1, precision : 0} }
+                    }
+                 }
+            });
+
+            chart2 = new Chart(document.getElementById('chartDuration'), {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(duration),
+                    datasets: [{ data: Object.values(duration), backgroundColor: ['#6366f1', '#ec4899'] }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+    </script>
+</body>
+</html>
